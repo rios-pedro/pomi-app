@@ -1,32 +1,41 @@
+use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem},
+    tray::TrayIcon,
     tray::TrayIconBuilder,
-    Manager,
+    Manager, State,
 };
 use tauri_plugin_positioner::{Position, WindowExt};
 
+struct TrayState(Mutex<Option<TrayIcon>>);
+
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+fn update_tray_title(app: tauri::AppHandle, time: String, state: State<TrayState>) {
+    let tray_guard = state.0.lock().unwrap();
+    if let Some(tray) = tray_guard.as_ref() {
+        let _ = tray.set_title(Some(time));
+    }
+    let _ = app;
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(TrayState(Mutex::new(None)))
+        .invoke_handler(tauri::generate_handler![update_tray_title])
         .setup(|app| {
-            // Tira o app do Dock e do Cmd+Tab (macOS)
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            // Menu de clique direito na tray
             let quit_item = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&quit_item])?;
 
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
+                .title("25:00")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| {
@@ -56,6 +65,9 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            let state: State<TrayState> = app.state();
+            *state.0.lock().unwrap() = Some(tray);
 
             Ok(())
         })

@@ -1,50 +1,129 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 import "./App.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+const PRESETS = [5, 15, 25, 45];
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+function formatTime(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+async function notifyDone() {
+  let granted = await isPermissionGranted();
+  if (!granted) {
+    const permission = await requestPermission();
+    granted = permission === "granted";
   }
+  if (granted) {
+    sendNotification({
+      title: "Pomi",
+      body: "Tempo esgotado!",
+    });
+  }
+}
+
+function App() {
+  const [minutes, setMinutes] = useState(25);
+  const [secondsLeft, setSecondsLeft] = useState(25 * 60);
+  const [isRunning, setIsRunning] = useState(false);
+  const hasNotified = useRef(false);
+
+  useEffect(() => {
+    if (!isRunning) {
+      setSecondsLeft(minutes * 60);
+    }
+  }, [minutes]);
+
+  // Atualiza o título da tray sempre que o tempo muda
+  useEffect(() => {
+    invoke("update_tray_title", { time: formatTime(secondsLeft) });
+  }, [secondsLeft]);
+
+  // Loop do timer
+  useEffect(() => {
+    if (!isRunning) return;
+
+    if (secondsLeft <= 0) {
+      setIsRunning(false);
+      if (!hasNotified.current) {
+        hasNotified.current = true;
+        notifyDone();
+      }
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isRunning, secondsLeft]);
+
+  const handlePreset = useCallback((mins: number) => {
+    setIsRunning(false);
+    hasNotified.current = false;
+    setMinutes(mins);
+    setSecondsLeft(mins * 60);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setIsRunning(false);
+    hasNotified.current = false;
+    setSecondsLeft(minutes * 60);
+  }, [minutes]);
+
+  const handleToggle = useCallback(() => {
+    if (secondsLeft <= 0) return;
+    hasNotified.current = false;
+    setIsRunning((r) => !r);
+  }, [secondsLeft]);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className="container">
+      <div className="time-display">{formatTime(secondsLeft)}</div>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <input
+        type="range"
+        min={1}
+        max={60}
+        value={minutes}
+        disabled={isRunning}
+        onChange={(e) => setMinutes(Number(e.target.value))}
+        className="slider"
+      />
+      <div className="minutes-label">{minutes} min</div>
+
+      <div className="presets">
+        {PRESETS.map((p) => (
+          <button
+            key={p}
+            className={`preset-btn ${minutes === p ? "active" : ""}`}
+            onClick={() => handlePreset(p)}
+            disabled={isRunning}
+          >
+            {p}
+          </button>
+        ))}
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+      <div className="controls">
+        <button className="control-btn" onClick={handleReset}>
+          Reset
+        </button>
+        <button className="control-btn primary" onClick={handleToggle}>
+          {isRunning ? "Pause" : "Start"}
+        </button>
+      </div>
+    </div>
   );
 }
 
