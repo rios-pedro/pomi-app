@@ -69,9 +69,6 @@ pub fn run() {
             let state: State<TrayState> = app.state();
             *state.0.lock().unwrap() = Some(tray);
 
-            let state: State<TrayState> = app.state();
-            *state.0.lock().unwrap() = Some(tray);
-
             // Esconde a janela automaticamente quando perde o foco
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
@@ -81,8 +78,6 @@ pub fn run() {
                     }
                 });
             }
-
-            Ok(())
 
             Ok(())
         })
