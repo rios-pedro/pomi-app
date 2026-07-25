@@ -26,7 +26,11 @@ async function notifyDone() {
     granted = permission === "granted";
   }
   if (granted) {
-    sendNotification({ title: "Pomi", body: "Tempo esgotado!" });
+    sendNotification({
+      title: "Pomi 🍊",
+      body: "Sua sessão terminou. Hora de respirar.",
+      sound: "Ping",
+    });
   }
 }
 
