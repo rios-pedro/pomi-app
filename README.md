@@ -1,45 +1,56 @@
-# Pomi 🍙
+# Pomi 🍊
 
-Um timer Pomodoro minimalista para macOS, inspirado no Onigiri. Vive na barra de menu, sem ícone no Dock, sem distração.
+A minimalist Pomodoro timer for macOS that lives in the menu bar, distraction-free.
 
 ## Stack
 
-- [Tauri 2](https://tauri.app/) — Rust + WebView nativo
+- [Tauri 2](https://tauri.app/) — Rust + native WebView
 - React + TypeScript
-- `tauri-plugin-positioner` — ancora a janela perto do ícone da tray
-- `tauri-plugin-notification` — notificações nativas do macOS
+- `tauri-plugin-positioner` — anchors the window near the tray icon
+- `tauri-plugin-notification` — native macOS notifications
 
-## Funcionalidades
+## Features
 
-- Ícone na menu bar mostrando o tempo restante em tempo real
-- Sem ícone no Dock nem no Cmd+Tab (roda como `Accessory`)
-- Presets rápidos (5, 15, 25, 45 min) + slider customizável
-- Notificação nativa quando o tempo esgota
-- Janela flutuante tipo popover, ancorada abaixo do ícone da tray
+- Menu bar icon showing the remaining time in real time
+- No Dock icon, no Cmd+Tab entry (runs as `Accessory`)
+- Quick presets (5, 15, 25, 45 min) + customizable slider
+- Visual progress ring around the timer that changes color in the last 20% of the time
+- Popover-style floating window anchored below the tray icon, with rounded corners (transparent window)
+- Auto-hides when clicking outside or switching apps (hide on blur)
+- Native notification when time runs out
 
-## Rodando localmente
+## Running locally
 
 ```bash
 npm install
 npm run tauri dev
 ```
 
-## Build de produção
+## Production build
 
 ```bash
 npm run tauri build
 ```
 
-O `.app` gerado fica em `src-tauri/target/release/bundle/macos/pomi.app`.
+The generated `.app` will be at `src-tauri/target/release/bundle/macos/pomi.app`.
 
-> **Nota:** notificações só funcionam corretamente no `.app` buildado (`tauri build`), não no modo dev (`tauri dev`) — o macOS não registra apps do dev server no Notification Center.
+> **Note:** notifications only work reliably in the built `.app` (`tauri build`), not in dev mode (`tauri dev`) — macOS doesn't register dev server apps in the Notification Center.
 
-## Estrutura
+## Changing the app icon
 
-src/ → frontend React/TS
-src-tauri/src/ → backend Rust (tray, comandos, janela)
-src-tauri/capabilities/ → permissões do Tauri (notification, positioner, etc.)
+```bash
+npm run tauri icon path/to/icon-1024x1024.png
+```
 
-## Licença
+This automatically generates every required size (`.icns`, `.ico`, PNGs) inside `src-tauri/icons/`.
+
+## Project structure
+
+src/ → React/TS frontend (UI, timer logic)
+src-tauri/src/ → Rust backend (tray, commands, window, auto-hide)
+src-tauri/capabilities/ → Tauri permissions (notification, positioner, etc.)
+src-tauri/icons/ → app icons in all sizes
+
+## License
 
 MIT
