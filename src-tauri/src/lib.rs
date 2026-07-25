@@ -1,21 +1,99 @@
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIcon,
     tray::TrayIconBuilder,
-    Manager, State,
+    AppHandle, Emitter, Manager, State,
 };
+use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_positioner::{Position, WindowExt};
 
 struct TrayState(Mutex<Option<TrayIcon>>);
 
-#[tauri::command]
-fn update_tray_title(app: tauri::AppHandle, time: String, state: State<TrayState>) {
-    let tray_guard = state.0.lock().unwrap();
-    if let Some(tray) = tray_guard.as_ref() {
-        let _ = tray.set_title(Some(time));
+struct TimerState(Mutex<TimerData>);
+
+struct TimerData {
+    seconds_left: u64,
+    total_seconds: u64,
+    running: bool,
+}
+
+impl Default for TimerData {
+    fn default() -> Self {
+        TimerData { seconds_left: 25 * 60, total_seconds: 25 * 60, running: false }
     }
-    let _ = app;
+}
+
+#[derive(Clone, serde::Serialize)]
+struct TickPayload {
+    seconds_left: u64,
+    total_seconds: u64,
+    running: bool,
+}
+
+fn format_time(total_seconds: u64) -> String {
+    format!("{:02}:{:02}", total_seconds / 60, total_seconds % 60)
+}
+
+fn emit_tick(app: &AppHandle, data: &TimerData) {
+    let _ = app.emit(
+        "timer-tick",
+        TickPayload {
+            seconds_left: data.seconds_left,
+            total_seconds: data.total_seconds,
+            running: data.running,
+        },
+    );
+
+    let tray_state: State<TrayState> = app.state();
+    let tray_guard = tray_state.0.lock().unwrap();
+    if let Some(tray) = tray_guard.as_ref() {
+        let _ = tray.set_title(Some(format_time(data.seconds_left)));
+    }
+}
+
+#[tauri::command]
+fn start_timer(app: AppHandle, state: State<TimerState>) {
+    let mut data = state.0.lock().unwrap();
+    if data.seconds_left > 0 {
+        data.running = true;
+    }
+    emit_tick(&app, &data);
+}
+
+#[tauri::command]
+fn pause_timer(app: AppHandle, state: State<TimerState>) {
+    let mut data = state.0.lock().unwrap();
+    data.running = false;
+    emit_tick(&app, &data);
+}
+
+#[tauri::command]
+fn set_minutes(app: AppHandle, minutes: u64, state: State<TimerState>) {
+    let mut data = state.0.lock().unwrap();
+    data.running = false;
+    data.total_seconds = minutes * 60;
+    data.seconds_left = minutes * 60;
+    emit_tick(&app, &data);
+}
+
+#[tauri::command]
+fn reset_timer(app: AppHandle, state: State<TimerState>) {
+    let mut data = state.0.lock().unwrap();
+    data.running = false;
+    data.seconds_left = data.total_seconds;
+    emit_tick(&app, &data);
+}
+
+#[tauri::command]
+fn get_timer_state(state: State<TimerState>) -> TickPayload {
+    let data = state.0.lock().unwrap();
+    TickPayload {
+        seconds_left: data.seconds_left,
+        total_seconds: data.total_seconds,
+        running: data.running,
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -25,7 +103,14 @@ pub fn run() {
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_opener::init())
         .manage(TrayState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![update_tray_title])
+        .manage(TimerState(Mutex::new(TimerData::default())))
+        .invoke_handler(tauri::generate_handler![
+            start_timer,
+            pause_timer,
+            set_minutes,
+            reset_timer,
+            get_timer_state
+        ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -66,10 +151,10 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            let state: State<TrayState> = app.state();
-            *state.0.lock().unwrap() = Some(tray);
+            let tray_state: State<TrayState> = app.state();
+            *tray_state.0.lock().unwrap() = Some(tray);
 
-            // Esconde a janela automaticamente quando perde o foco
+            // Esconde ao perder o foco
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
                 window.on_window_event(move |event| {
@@ -78,6 +163,35 @@ pub fn run() {
                     }
                 });
             }
+
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::from_secs(1));
+
+                let timer_state: State<TimerState> = app_handle.state();
+                let mut data = timer_state.0.lock().unwrap();
+
+                if !data.running {
+                    continue;
+                }
+
+                if data.seconds_left > 0 {
+                    data.seconds_left -= 1;
+                }
+
+                if data.seconds_left == 0 {
+                    data.running = false;
+                    let _ = app_handle
+                        .notification()
+                        .builder()
+                        .title("Pomi 🍊")
+                        .body("Finished. Take a break or start another session.")
+                        .sound("Ping")
+                        .show();
+                }
+
+                emit_tick(&app_handle, &data);
+            });
 
             Ok(())
         })

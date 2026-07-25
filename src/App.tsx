@@ -1,10 +1,6 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification,
-} from "@tauri-apps/plugin-notification";
+import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 
 const PRESETS = [5, 15, 25, 45];
@@ -12,100 +8,72 @@ const RADIUS = 88;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function formatTime(totalSeconds: number) {
-  const m = Math.floor(totalSeconds / 60)
-    .toString()
-    .padStart(2, "0");
+  const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
   const s = (totalSeconds % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
 }
 
-async function notifyDone() {
-  let granted = await isPermissionGranted();
-  if (!granted) {
-    const permission = await requestPermission();
-    granted = permission === "granted";
-  }
-  if (granted) {
-    sendNotification({
-      title: "Pomi 🍊",
-      body: "Finished. Take a break or start another session.",
-      sound: "Ping",
-    });
-  }
-}
+type TickPayload = {
+  seconds_left: number;
+  total_seconds: number;
+  running: boolean;
+};
 
 function App() {
-  const [minutes, setMinutes] = useState(25);
   const [secondsLeft, setSecondsLeft] = useState(25 * 60);
+  const [totalSeconds, setTotalSeconds] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const hasNotified = useRef(false);
 
   useEffect(() => {
-    if (!isRunning) setSecondsLeft(minutes * 60);
-  }, [minutes]);
+    invoke<TickPayload>("get_timer_state").then((data) => {
+      setSecondsLeft(data.seconds_left);
+      setTotalSeconds(data.total_seconds);
+      setIsRunning(data.running);
+    });
 
-  useEffect(() => {
-    invoke("update_tray_title", { time: formatTime(secondsLeft) });
-  }, [secondsLeft]);
+    const unlisten = listen<TickPayload>("timer-tick", (event) => {
+      setSecondsLeft(event.payload.seconds_left);
+      setTotalSeconds(event.payload.total_seconds);
+      setIsRunning(event.payload.running);
+    });
 
-  useEffect(() => {
-    if (!isRunning) return;
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
 
-    if (secondsLeft <= 0) {
-      setIsRunning(false);
-      if (!hasNotified.current) {
-        hasNotified.current = true;
-        notifyDone();
-      }
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isRunning, secondsLeft]);
+  const minutes = Math.round(totalSeconds / 60);
 
   const handlePreset = useCallback((mins: number) => {
-    setIsRunning(false);
-    hasNotified.current = false;
-    setMinutes(mins);
-    setSecondsLeft(mins * 60);
+    invoke("set_minutes", { minutes: mins });
+  }, []);
+
+  const handleSliderChange = useCallback((mins: number) => {
+    invoke("set_minutes", { minutes: mins });
   }, []);
 
   const handleReset = useCallback(() => {
-    setIsRunning(false);
-    hasNotified.current = false;
-    setSecondsLeft(minutes * 60);
-  }, [minutes]);
+    invoke("reset_timer");
+  }, []);
 
   const handleToggle = useCallback(() => {
-    if (secondsLeft <= 0) return;
-    hasNotified.current = false;
-    setIsRunning((r) => !r);
-  }, [secondsLeft]);
+    if (isRunning) {
+      invoke("pause_timer");
+    } else {
+      if (secondsLeft <= 0) return;
+      invoke("start_timer");
+    }
+  }, [isRunning, secondsLeft]);
 
-  const totalSeconds = minutes * 60;
   const progress = totalSeconds > 0 ? secondsLeft / totalSeconds : 0;
   const isUrgent = progress <= 0.2 && progress > 0;
-  const dashOffset = useMemo(
-    () => CIRCUMFERENCE * (1 - progress),
-    [progress]
-  );
+  const dashOffset = useMemo(() => CIRCUMFERENCE * (1 - progress), [progress]);
 
   return (
     <div className="container">
       <div className={`ring-wrap ${isRunning ? "running" : ""}`}>
         <svg width="200" height="200" viewBox="0 0 200 200">
-          <circle
-            className="ring-track"
-            cx="100"
-            cy="100"
-            r={RADIUS}
-            fill="none"
-            strokeWidth="4"
-          />
+          <circle className="ring-track" cx="100" cy="100" r={RADIUS} fill="none" strokeWidth="4" />
           <circle
             className={`ring-progress ${isUrgent ? "urgent" : ""}`}
             cx="100"
@@ -128,7 +96,7 @@ function App() {
         max={60}
         value={minutes}
         disabled={isRunning}
-        onChange={(e) => setMinutes(Number(e.target.value))}
+        onChange={(e) => handleSliderChange(Number(e.target.value))}
         className="slider"
       />
       <div className="minutes-label">{minutes} min</div>
