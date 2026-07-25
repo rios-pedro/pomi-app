@@ -28,7 +28,7 @@ async function notifyDone() {
   if (granted) {
     sendNotification({
       title: "Pomi 🍊",
-      body: "Sua sessão terminou. Hora de respirar.",
+      body: "Finished. Take a break or start another session.",
       sound: "Ping",
     });
   }
