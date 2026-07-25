@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   isPermissionGranted,
@@ -8,6 +8,8 @@ import {
 import "./App.css";
 
 const PRESETS = [5, 15, 25, 45];
+const RADIUS = 88;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function formatTime(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60)
@@ -24,10 +26,7 @@ async function notifyDone() {
     granted = permission === "granted";
   }
   if (granted) {
-    sendNotification({
-      title: "Pomi",
-      body: "Tempo esgotado!",
-    });
+    sendNotification({ title: "Pomi", body: "Tempo esgotado!" });
   }
 }
 
@@ -38,17 +37,13 @@ function App() {
   const hasNotified = useRef(false);
 
   useEffect(() => {
-    if (!isRunning) {
-      setSecondsLeft(minutes * 60);
-    }
+    if (!isRunning) setSecondsLeft(minutes * 60);
   }, [minutes]);
 
-  // Atualiza o título da tray sempre que o tempo muda
   useEffect(() => {
     invoke("update_tray_title", { time: formatTime(secondsLeft) });
   }, [secondsLeft]);
 
-  // Loop do timer
   useEffect(() => {
     if (!isRunning) return;
 
@@ -87,9 +82,41 @@ function App() {
     setIsRunning((r) => !r);
   }, [secondsLeft]);
 
+  const totalSeconds = minutes * 60;
+  const progress = totalSeconds > 0 ? secondsLeft / totalSeconds : 0;
+  const isUrgent = progress <= 0.2 && progress > 0;
+  const dashOffset = useMemo(
+    () => CIRCUMFERENCE * (1 - progress),
+    [progress]
+  );
+
   return (
     <div className="container">
-      <div className="time-display">{formatTime(secondsLeft)}</div>
+      <div className={`ring-wrap ${isRunning ? "running" : ""}`}>
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <circle
+            className="ring-track"
+            cx="100"
+            cy="100"
+            r={RADIUS}
+            fill="none"
+            strokeWidth="4"
+          />
+          <circle
+            className={`ring-progress ${isUrgent ? "urgent" : ""}`}
+            cx="100"
+            cy="100"
+            r={RADIUS}
+            fill="none"
+            strokeWidth="4"
+            strokeDasharray={CIRCUMFERENCE}
+            strokeDashoffset={dashOffset}
+            strokeLinecap="round"
+            transform="rotate(-90 100 100)"
+          />
+        </svg>
+        <div className="time-display">{formatTime(secondsLeft)}</div>
+      </div>
 
       <input
         type="range"

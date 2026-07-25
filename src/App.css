@@ -11,7 +11,7 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -19,33 +19,78 @@ body {
 .container {
   width: 280px;
   height: 340px;
-  background: #0d0d0d;
-  color: #f5f5f5;
+  background: #171512;
+  color: #f3eee3;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #262626;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #2a2620;
+}
+
+.ring-wrap {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-wrap svg {
+  position: absolute;
+  top: -35px;
+  left: -35px;
+  width: 200px;
+  height: 200px;
+  transform: scale(0.65);
+}
+
+.ring-track {
+  stroke: #2a2620;
+}
+
+.ring-progress {
+  stroke: #e8483a;
+  transition: stroke-dashoffset 1s linear, stroke 0.6s ease;
+}
+
+.ring-progress.urgent {
+  stroke: #ffb648;
+}
+
+.ring-wrap.running .ring-progress.urgent {
+  animation: pulse-urgent 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-urgent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .time-display {
-  font-size: 48px;
-  font-weight: 600;
+  font-family: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  font-size: 34px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 1px;
+  letter-spacing: -0.5px;
+  z-index: 1;
 }
 
 .slider {
   width: 100%;
-  accent-color: #f5f5f5;
+  accent-color: #e8483a;
 }
 
 .minutes-label {
-  font-size: 13px;
-  color: #8a8a8a;
+  font-size: 11px;
+  color: #8c8478;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 500;
 }
 
 .presets {
@@ -54,60 +99,67 @@ body {
 }
 
 .preset-btn {
-  background: #1a1a1a;
-  border: 1px solid #2e2e2e;
-  color: #cfcfcf;
+  background: #211e1a;
+  border: 1px solid #322d26;
+  color: #b8b0a2;
   padding: 6px 12px;
   border-radius: 8px;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .preset-btn:hover:not(:disabled) {
-  background: #262626;
+  background: #2a2620;
+  border-color: #e8483a;
 }
 
 .preset-btn.active {
-  background: #f5f5f5;
-  color: #0d0d0d;
-  border-color: #f5f5f5;
+  background: #e8483a;
+  color: #f3eee3;
+  border-color: #e8483a;
 }
 
 .preset-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .controls {
   display: flex;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .control-btn {
   flex: 1;
   padding: 10px 20px;
   border-radius: 8px;
-  border: 1px solid #2e2e2e;
-  background: #1a1a1a;
-  color: #f5f5f5;
-  font-size: 14px;
+  border: 1px solid #322d26;
+  background: #211e1a;
+  color: #f3eee3;
+  font-size: 13px;
   font-weight: 500;
+  letter-spacing: 0.3px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .control-btn:hover {
-  background: #262626;
+  background: #2a2620;
 }
 
 .control-btn.primary {
-  background: #f5f5f5;
-  color: #0d0d0d;
-  border-color: #f5f5f5;
+  background: #e8483a;
+  color: #f3eee3;
+  border-color: #e8483a;
 }
 
 .control-btn.primary:hover {
-  background: #d9d9d9;
+  background: #d13c2f;
+}
+
+.control-btn:active {
+  transform: scale(0.97);
 }
