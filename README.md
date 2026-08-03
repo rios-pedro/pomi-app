@@ -1,4 +1,4 @@
-# Pomi 🍊
+# Pomi 🍅
 
 A minimalist Pomodoro timer for macOS that lives in the menu bar, distraction-free.
 
