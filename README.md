@@ -2,6 +2,13 @@
 
 A minimalist Pomodoro timer for macOS that lives in the menu bar, distraction-free.
 
+#Install
+
+Paste on Mac terminal:
+ 
+curl -fsSL https://raw.githubusercontent.com/rios-pedro/pomi-app/main/install.sh | sh
+
+
 ## Stack
 
 - [Tauri 2](https://tauri.app/) — Rust + native WebView
