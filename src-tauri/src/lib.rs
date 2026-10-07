@@ -129,26 +129,26 @@ pub fn run() {
                     }
                 })
                 .on_tray_icon_event(|tray, event| {
-                    tauri_plugin_positioner::on_tray_event(tray.app_handle(), &event);
+    tauri_plugin_positioner::on_tray_event(tray.app_handle(), &event);
 
-                    if let tauri::tray::TrayIconEvent::Click {
-                        button: tauri::tray::MouseButton::Left,
-                        button_state: tauri::tray::MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.move_window(Position::TrayCenter);
-                            if window.is_visible().unwrap_or(false) {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                    }
-                })
+    if let tauri::tray::TrayIconEvent::Click {
+        button: tauri::tray::MouseButton::Left,
+        button_state: tauri::tray::MouseButtonState::Down, // 👈 Alterado de Up para Down
+        ..
+    } = event
+    {
+        let app = tray.app_handle();
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.move_window(Position::TrayCenter);
+            if window.is_visible().unwrap_or(false) {
+                let _ = window.hide();
+            } else {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }
+    }
+})
                 .build(app)?;
 
             let tray_state: State<TrayState> = app.state();
