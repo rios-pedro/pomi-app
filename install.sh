@@ -2,7 +2,7 @@
 
 
 echo "⏳ Downloading the Pomi (v1.0.1)..."
-curl -fsSL -o /tmp/pomi.dmg "https://github.com/rios-pedro/pomi-app/releases/download/v1.0.1/pomi_1.0.1.dmg"
+curl -fsSL -o /tmp/pomi.dmg "https://github.com/rios-pedro/pomi-app/releases/download/v1.0.2/pomi_1.0.2.dmg"
 
 echo "📦 Installing in the Applications folder..."
 hdiutil attach /tmp/pomi.dmg -nobrowse -quiet
