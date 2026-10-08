@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-echo "⏳ Downloading the Pomi (v1.0.1)..."
-curl -fsSL -o /tmp/pomi.dmg "https://github.com/rios-pedro/pomi-app/releases/download/v1.0.2/pomi_1.0.2.dmg"
+echo "⏳ Downloading the Pomi (v1.0.3)..."
+curl -fsSL -o /tmp/pomi.dmg "https://github.com/rios-pedro/pomi-app/releases/download/v1.0.3/pomi_1.0.3.dmg"
 
 echo "📦 Installing in the Applications folder..."
 hdiutil attach /tmp/pomi.dmg -nobrowse -quiet
