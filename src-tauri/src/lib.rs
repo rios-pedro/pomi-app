@@ -1,11 +1,6 @@
 use std::sync::Mutex;
 use std::time::Duration;
-use tauri::{
-    menu::{Menu, MenuItem},
-    tray::TrayIcon,
-    tray::TrayIconBuilder,
-    AppHandle, Emitter, Manager, State,
-};
+use tauri::{tray::TrayIcon, tray::TrayIconBuilder, AppHandle, Emitter, Manager, State};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_positioner::{Position, WindowExt};
 
@@ -21,7 +16,11 @@ struct TimerData {
 
 impl Default for TimerData {
     fn default() -> Self {
-        TimerData { seconds_left: 25 * 60, total_seconds: 25 * 60, running: false }
+        TimerData {
+            seconds_left: 25 * 60,
+            total_seconds: 25 * 60,
+            running: false,
+        }
     }
 }
 
@@ -102,6 +101,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_process::init())
         .manage(TrayState(Mutex::new(None)))
         .manage(TimerState(Mutex::new(TimerData::default())))
         .invoke_handler(tauri::generate_handler![
@@ -115,40 +115,30 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            let quit_item = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&quit_item])?;
-
             let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .title("25:00")
-                .menu(&menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| {
-                    if event.id.as_ref() == "quit" {
-                        app.exit(0);
+                .on_tray_icon_event(|tray, event| {
+                    tauri_plugin_positioner::on_tray_event(tray.app_handle(), &event);
+                    println!("Evento do Tray recebido: {:?}", event);
+                    if let tauri::tray::TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        button_state: tauri::tray::MouseButtonState::Down, // 👈 Alterado de Up para Down
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.move_window(Position::TrayCenter);
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
                     }
                 })
-                .on_tray_icon_event(|tray, event| {
-    tauri_plugin_positioner::on_tray_event(tray.app_handle(), &event);
-
-    if let tauri::tray::TrayIconEvent::Click {
-        button: tauri::tray::MouseButton::Left,
-        button_state: tauri::tray::MouseButtonState::Down, // 👈 Alterado de Up para Down
-        ..
-    } = event
-    {
-        let app = tray.app_handle();
-        if let Some(window) = app.get_webview_window("main") {
-            let _ = window.move_window(Position::TrayCenter);
-            if window.is_visible().unwrap_or(false) {
-                let _ = window.hide();
-            } else {
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
-        }
-    }
-})
                 .build(app)?;
 
             let tray_state: State<TrayState> = app.state();

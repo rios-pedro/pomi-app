@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { exit } from "@tauri-apps/plugin-process";
 import "./App.css";
 
 const PRESETS = [5, 15, 25, 45];
@@ -122,6 +123,10 @@ function App() {
           {isRunning ? "Pause" : "Start"}
         </button>
       </div>
+
+      <button className="exit-btn" onClick={() => exit(0)}>
+        Sair
+      </button>
     </div>
   );
 }

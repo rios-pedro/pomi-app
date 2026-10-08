@@ -163,3 +163,16 @@ body {
 .control-btn:active {
   transform: scale(0.97);
 }
+
+.exit-btn {
+  background: transparent;
+  border: 0;
+  color: #8c8478;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 8px;
+}
+
+.exit-btn:hover {
+  color: #e8483a;
+}
