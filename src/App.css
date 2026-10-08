@@ -33,20 +33,20 @@ body {
 
 .ring-wrap {
   position: relative;
-  width: 130px;
-  height: 130px;
+  width: 160px;  /* 👈 Círculo maior */
+  height: 160px; /* 👈 Círculo maior */
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 12px;
 }
 
 .ring-wrap svg {
   position: absolute;
-  top: -35px;
-  left: -35px;
-  width: 200px;
-  height: 200px;
-  transform: scale(0.65);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .ring-track {
@@ -73,11 +73,13 @@ body {
 
 .time-display {
   font-family: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
-  font-size: 34px;
+  font-size: 25px; 
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.5px;
   z-index: 1;
+  line-height: 1;
+  margin: 0;
 }
 
 .slider {
